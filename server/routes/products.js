@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const dayjs = require('dayjs');
 const db = require('../db');
 const { authMiddleware } = require('../middleware/auth');
+const { deleteProductImage } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -105,6 +106,8 @@ router.put('/:id', (req, res) => {
 
   const now = new Date().toISOString();
   const newDeadline = deadline ? dayjs(deadline).toISOString() : product.deadline;
+  const oldImage = product.image;
+  const imageChanged = image !== undefined && image !== oldImage;
 
   db.prepare(`
     UPDATE products SET
@@ -129,6 +132,10 @@ router.put('/:id', (req, res) => {
     now,
     req.params.id, req.leader.id
   );
+
+  if (imageChanged && oldImage) {
+    deleteProductImage(oldImage);
+  }
 
   res.json({ code: 0, message: '商品更新成功' });
 });
@@ -160,6 +167,37 @@ router.post('/:id/online', (req, res) => {
     .run('active', now, req.params.id, req.leader.id);
 
   res.json({ code: 0, message: '商品已上架' });
+});
+
+router.delete('/:id', (req, res) => {
+  const product = db.prepare('SELECT * FROM products WHERE id = ? AND leader_id = ?').get(req.params.id, req.leader.id);
+  if (!product) {
+    return res.status(404).json({ code: 404, message: '商品不存在' });
+  }
+
+  const pendingCount = db.prepare(`
+    SELECT COUNT(*) as c FROM orders
+    WHERE product_id = ? AND leader_id = ? AND status IN ('pending_payment', 'pending_pickup')
+  `).get(req.params.id, req.leader.id).c;
+
+  if (pendingCount > 0) {
+    return res.status(400).json({
+      code: 400,
+      message: `该商品存在 ${pendingCount} 个待处理订单，无法删除`
+    });
+  }
+
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM orders WHERE product_id = ? AND leader_id = ?').run(req.params.id, req.leader.id);
+    db.prepare('DELETE FROM products WHERE id = ? AND leader_id = ?').run(req.params.id, req.leader.id);
+  });
+  tx();
+
+  if (product.image) {
+    deleteProductImage(product.image);
+  }
+
+  res.json({ code: 0, message: '商品已删除' });
 });
 
 module.exports = router;

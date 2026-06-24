@@ -103,7 +103,7 @@
           <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
         </el-table-column>
 
-        <el-table-column label="操作" width="260" align="center" fixed="right">
+        <el-table-column label="操作" width="320" align="center" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" link @click="openOrder(row)"
               :disabled="row.status==='offline' || row.is_expired">
@@ -125,6 +125,12 @@
               @click="handleOnline(row)"
               :disabled="row.is_expired"
             >上架</el-button>
+            <el-button
+              size="small"
+              type="danger"
+              link
+              @click="handleDelete(row)"
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -163,7 +169,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Upload } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
-import { getProducts, offlineProduct, onlineProduct, createProduct } from '@/api/products'
+import { getProducts, offlineProduct, onlineProduct, createProduct, deleteProduct } from '@/api/products'
 import ProductDialog from '@/components/ProductDialog.vue'
 import OrderDialog from '@/components/OrderDialog.vue'
 import CountdownTimer from '@/components/CountdownTimer.vue'
@@ -247,6 +253,21 @@ async function handleOnline(row) {
   await onlineProduct(row.id)
   ElMessage.success('已上架')
   loadList()
+}
+
+async function handleDelete(row) {
+  await ElMessageBox.confirm(
+    `确定删除【${row.name}】吗？删除后将无法恢复，同时会清理服务器上的图片文件`,
+    '确认删除',
+    { type: 'error', confirmButtonText: '确定删除', cancelButtonText: '取消' }
+  )
+  try {
+    await deleteProduct(row.id)
+    ElMessage.success('已删除')
+    loadList()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '删除失败')
+  }
 }
 
 async function importDemo() {

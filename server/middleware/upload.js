@@ -83,10 +83,40 @@ function expressStaticWrapper(dir) {
   return express.static(dir);
 }
 
+function deleteProductImage(imageUrl) {
+  if (!imageUrl || typeof imageUrl !== 'string') return false;
+
+  try {
+    const filename = imageUrl.startsWith('/uploads/')
+      ? imageUrl.slice('/uploads/'.length)
+      : path.basename(imageUrl);
+
+    if (!filename || filename === '.' || filename === '..') return false;
+    if (ALLOW_EXT.includes(path.extname(filename).toLowerCase()) === false) return false;
+
+    const absPath = path.normalize(path.join(UPLOAD_DIR, filename));
+    const realUploadDir = path.normalize(UPLOAD_DIR);
+    if (!absPath.startsWith(realUploadDir + path.sep) && absPath !== realUploadDir) {
+      console.warn('[upload] 路径越界拦截:', imageUrl);
+      return false;
+    }
+
+    if (fs.existsSync(absPath)) {
+      fs.unlinkSync(absPath);
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.warn('[upload] 删除图片失败:', imageUrl, e.message);
+    return false;
+  }
+}
+
 module.exports = {
   UPLOAD_DIR,
   upload,
   uploadErrorHandler,
   ensureUploadDir,
-  setupUploadRoutes
+  setupUploadRoutes,
+  deleteProductImage
 };
