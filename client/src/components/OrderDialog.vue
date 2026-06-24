@@ -10,7 +10,10 @@
     <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
       <el-form-item label="商品信息">
         <div v-if="product" class="product-summary">
-          <div class="ps-img">🥬</div>
+          <div class="ps-img">
+            <img v-if="product.image" :src="product.image" />
+            <span v-else>🥬</span>
+          </div>
           <div class="ps-info">
             <div class="ps-name">{{ product.name }}</div>
             <div class="ps-meta">
@@ -193,6 +196,18 @@ watch(() => props.product, (val) => {
   justify-content: center;
   font-size: 30px;
   flex-shrink: 0;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  span {
+    line-height: 1;
+  }
 }
 
 .ps-info {

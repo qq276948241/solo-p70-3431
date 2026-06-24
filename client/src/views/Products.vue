@@ -46,7 +46,10 @@
         <el-table-column label="商品" min-width="260">
           <template #default="{ row }">
             <div class="product-cell">
-              <div class="product-img">{{ row.image ? '' : pickEmoji(row.name) }}</div>
+              <div class="product-img">
+                <img v-if="row.image" :src="row.image" />
+                <span v-else>{{ pickEmoji(row.name) }}</span>
+              </div>
               <div class="product-info">
                 <div class="product-name">
                   {{ row.name }}
@@ -309,6 +312,18 @@ onMounted(() => {
   justify-content: center;
   font-size: 26px;
   flex-shrink: 0;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  span {
+    line-height: 1;
+  }
 }
 
 .product-info {
